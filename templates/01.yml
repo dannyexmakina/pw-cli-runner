@@ -1,0 +1,107 @@
+# pwyr シナリオテンプレート
+# 実行:   pwyr run template.yml
+# 検証:   pwyr check template.yml      （構文・セレクタ構文・変数参照）
+# 試走:   pwyr dryrun template.yml     （全操作を実行・ファイル出力なし・セレクタ診断あり）
+
+name: テンプレート
+browser: chromium        # chromium | firefox | webkit
+headless: true
+timeout: 30s             # ステップ単位のデフォルトタイムアウト
+output_dir: ./runs       # 実行UUIDディレクトリをこの下に作る
+concurrency: 2           # シナリオ並行数
+
+scenarios:
+  # ------------------------------------------------------------
+  # 例1: ログイン（group指定あり → 画像は scenarios/<シナリオUUID>/01.認証/ に保存）
+  # ------------------------------------------------------------
+  - name: ログインできる
+    group: "01.認証"
+    steps:
+      - goto: https://example.com/login
+
+      - fill:
+          selector: "#user"
+          value: ${env.LOGIN_USER}
+      - fill:
+          selector: "#pass"
+          value: ${env.LOGIN_PASS}
+
+      - click: "role=button[name='ログイン']"
+
+      - waitFor: "text=ダッシュボード"
+      - screenshot: after-login.png
+
+      - assert:
+          url_contains: /dashboard
+      - assert:
+          visible: "text=ようこそ"
+
+  # ------------------------------------------------------------
+  # 例2: 検索と値の抽出（group省略 → 画像はシナリオフォルダ直下）
+  # ------------------------------------------------------------
+  - name: 検索できる
+    steps:
+      - goto: https://example.com/
+
+      - type:
+          selector: "input[name=q]"
+          value: playwright
+      - press:
+          selector: "input[name=q]"
+          key: Enter
+
+      - wait: 1s
+      - waitFor: ".result-item"
+
+      - extract:
+          name: first_title
+          selector: ".result-item >> nth=0 >> h2"
+          attr: textContent        # または属性名（例: href）
+      - extract:
+          name: first_link
+          selector: ".result-item >> nth=0 >> a"
+          attr: href
+
+      - assert:
+          text_contains:
+            selector: ".result-item >> nth=0"
+            value: playwright
+      - assert:
+          not_equals:
+            left: ${step.first_title}
+            right: ""
+
+      - screenshot:
+          path: results-${scenario.id}.png
+          full_page: true
+      - pdf: results.pdf
+
+  # ------------------------------------------------------------
+  # 例3: フォーム部品・その他アクション
+  # ------------------------------------------------------------
+  - name: フォーム操作
+    group: "02.フォーム"
+    steps:
+      - goto: https://example.com/form
+
+      - select:
+          selector: "select#pref"
+          value: tokyo
+      - check: "input#agree"
+      - uncheck: "input#newsletter"
+      - hover: ".tooltip-trigger"
+
+      - evaluate:
+          name: page_title
+          script: "document.title"
+
+      - assert:
+          hidden: ".error-message"
+      - assert:
+          url_matches: "^https://example\\.com/form"
+      - assert:
+          equals:
+            left: ${scenario.group}
+            right: "02.フォーム"
+
+      - screenshot: filled.png
