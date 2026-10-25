@@ -1,0 +1,85 @@
+version: "3"
+
+vars:
+  BINARY: pwyr
+  BUILD_DIR: build
+  VERSION:
+    sh: git describe --tags --always --dirty 2>/dev/null || echo dev
+  LDFLAGS: -s -w -X main.version={{.VERSION}}
+
+tasks:
+  default:
+    cmds:
+      - task --list
+    silent: true
+
+  build:
+    desc: バイナリを build/ にビルド
+    sources:
+      - "**/*.go"
+      - go.mod
+      - go.sum
+      - templates/**
+    generates:
+      - "{{.BUILD_DIR}}/{{.BINARY}}"
+    cmds:
+      - go build -trimpath -ldflags "{{.LDFLAGS}}" -o {{.BUILD_DIR}}/{{.BINARY}} .
+
+  build:all:
+    desc: 主要OS/アーキ向けにクロスビルド
+    cmds:
+      - for: [darwin/arm64, darwin/amd64, linux/amd64, linux/arm64, windows/amd64]
+        cmd: |
+          GOOS=$(echo {{.ITEM}} | cut -d/ -f1) GOARCH=$(echo {{.ITEM}} | cut -d/ -f2)
+          EXT=""; [ "$GOOS" = windows ] && EXT=.exe
+          GOOS=$GOOS GOARCH=$GOARCH go build -trimpath -ldflags "{{.LDFLAGS}}" \
+            -o {{.BUILD_DIR}}/{{.BINARY}}-$GOOS-$GOARCH$EXT .
+
+  test:
+    desc: テストを実行
+    cmds:
+      - go test ./...
+
+  lint:
+    desc: go vet と gofmt チェック
+    cmds:
+      - go vet ./...
+      - test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+
+  fmt:
+    desc: gofmt で整形
+    cmds:
+      - gofmt -w .
+
+  tidy:
+    desc: go mod tidy
+    cmds:
+      - go mod tidy
+
+  install:
+    desc: $GOPATH/bin にインストール
+    cmds:
+      - go install -trimpath -ldflags "{{.LDFLAGS}}" .
+
+  check:
+    desc: pwyr.yml を静的検証（例 task check -- other.yml）
+    deps: [build]
+    cmds:
+      - ./{{.BUILD_DIR}}/{{.BINARY}} check {{.CLI_ARGS}}
+
+  dryrun:
+    desc: dryrun 実行（例 task dryrun -- other.yml）
+    deps: [build]
+    cmds:
+      - ./{{.BUILD_DIR}}/{{.BINARY}} dryrun {{.CLI_ARGS}}
+
+  run:
+    desc: 本番実行（例 task run -- other.yml）
+    deps: [build]
+    cmds:
+      - ./{{.BUILD_DIR}}/{{.BINARY}} run {{.CLI_ARGS}}
+
+  clean:
+    desc: ビルド成果物を削除
+    cmds:
+      - rm -rf {{.BUILD_DIR}}
