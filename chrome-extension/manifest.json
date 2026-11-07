@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "XPath Copier",
+  "version": "0.1.0",
+  "description": "右クリックした要素の絶対XPathをクリップボードにコピーする",
+  "permissions": ["contextMenus", "scripting", "activeTab"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "sw.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ]
+}
