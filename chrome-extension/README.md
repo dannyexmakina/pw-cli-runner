@@ -14,7 +14,42 @@ pw-cli-runnerの宣言ファイルに貼り付けるセレクタを取得する�
 ページ上の任意の要素を右クリック → 「XPathをコピー」
 
 クリップボードに `/html/body/div[1]/.../button[3]` 形式の絶対XPathが入る。
-これを宣言ファイルのセレクタフィールドに `xpath=/html/body/...` の形で貼る。
+
+## 宣言ファイルへの貼り付け
+
+pw-cli-runner側は追加の変更なしで絶対XPathをそのまま受け入れる。
+`xpath=` プレフィックスを付けた形で、セレクタフィールドに貼る。
+
+```yaml
+- action: click
+  args:
+    selector: "xpath=/html/body/div[1]/main/button[3]"
+```
+
+短縮形:
+
+```yaml
+- click: "xpath=/html/body/div[1]/main/button[3]"
+```
+
+### YAMLでの注意点
+
+**必ずダブルクオートで囲む。**
+
+絶対XPathは `[1]` `[3]` のような角括弧を含む。YAMLはクオート無しだと
+角括弧をフロースタイル(配列リテラル)として解釈しようとして構文エラーになる、
+もしくは意図せぬ値になる。
+
+```yaml
+# NG: 角括弧がYAMLに食われる
+selector: xpath=/html/body/div[1]/button[3]
+
+# OK: ダブルクオートで保護
+selector: "xpath=/html/body/div[1]/button[3]"
+```
+
+シングルクオートでもエスケープ上は問題ないが、他のセレクタ記法で
+将来エスケープが必要になった時のことを考えるとダブルクオート統一が無難。
 
 ## 設計方針
 
